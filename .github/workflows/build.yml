@@ -1,0 +1,55 @@
+name: Build APK
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Write local defaults
+        env:
+          UPSTREAM_HOST: ${{ secrets.UPSTREAM_HOST }}
+          UPSTREAM_PORT: ${{ secrets.UPSTREAM_PORT }}
+          UPSTREAM_USER: ${{ secrets.UPSTREAM_USER }}
+          UPSTREAM_PASS: ${{ secrets.UPSTREAM_PASS }}
+        run: |
+          cat >> gradle.properties <<PROPS
+          UPSTREAM_HOST=${UPSTREAM_HOST}
+          UPSTREAM_PORT=${UPSTREAM_PORT:-20027}
+          UPSTREAM_USER=${UPSTREAM_USER}
+          UPSTREAM_PASS=${UPSTREAM_PASS}
+          PROPS
+
+      - name: Build debug APK
+        run: ./gradlew assembleDebug --no-daemon
+
+      - name: Rename artifact
+        run: |
+          mkdir -p out
+          cp app/build/outputs/apk/debug/app-debug.apk \
+             out/LaneNode-${GITHUB_SHA::7}.apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: LaneNode-apk
+          path: out/*.apk
+          retention-days: 30
