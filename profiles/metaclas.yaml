@@ -1,0 +1,164 @@
+# MetaClash / FlClash / Clash Meta (mihomo) — drop-in profile
+# Renders from render.sh → metaclas.yaml
+#
+# Uses your existing HTTP CONNECT upstream (LaneNode / GitHub secrets).
+# This is NOT a VLESS/Reality node — those need a separate Xray endpoint.
+# Optional VLESS stub is at the bottom if you add one later.
+
+mixed-port: 7890
+socks-port: 7891
+redir-port: 7892
+tproxy-port: 7893
+allow-lan: false
+bind-address: "*"
+mode: rule
+log-level: info
+ipv6: false
+unified-delay: true
+tcp-concurrent: true
+find-process-mode: off
+global-client-fingerprint: chrome
+keep-alive-interval: 15
+profile:
+  store-selected: true
+  store-fake-ip: true
+
+tun:
+  enable: true
+  stack: mixed
+  dns-hijack:
+    - any:53
+    - tcp://any:53
+  auto-route: true
+  auto-detect-interface: true
+  strict-route: true
+  mtu: 1500
+
+dns:
+  enable: true
+  listen: 0.0.0.0:1053
+  ipv6: false
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.1/16
+  fake-ip-filter:
+    - "*.lan"
+    - "*.local"
+    - localhost
+    - "*.localhost"
+    - "+.svc.cluster.local"
+    - "time.*.com"
+    - "ntp.*.com"
+    - "stun.*.*"
+    - "stun.*.*.*"
+  default-nameserver:
+    - 1.1.1.1
+    - 8.8.8.8
+  nameserver:
+    - https://1.1.1.1/dns-query
+    - https://8.8.8.8/dns-query
+  fallback:
+    - https://9.9.9.9/dns-query
+    - tls://1.0.0.1:853
+  fallback-filter:
+    geoip: true
+    geoip-code: CN
+    ipcidr:
+      - 240.0.0.0/4
+  respect-rules: false
+
+sniffer:
+  enable: true
+  force-dns-mapping: true
+  parse-pure-ip: true
+  override-destination: true
+  sniff:
+    HTTP:
+      ports: [80, 8080-8880]
+    TLS:
+      ports: [443, 8443]
+    QUIC:
+      ports: [443]
+
+proxies:
+  - name: Upstream-HTTP
+    type: http
+    server: __UPSTREAM_HOST__
+    port: __UPSTREAM_PORT__
+    username: __UPSTREAM_USER__
+    password: __UPSTREAM_PASS__
+    # skip-cert-verify only if your upstream is HTTPS-proxy with a bad cert
+    # tls: true
+    # skip-cert-verify: true
+
+  # --- Optional: fill ONLY if you later stand up a real VLESS/Reality node ---
+  # - name: Upstream-VLESS-Reality
+  #   type: vless
+  #   server: YOUR_VLESS_HOST
+  #   port: 443
+  #   uuid: YOUR_UUID
+  #   network: tcp
+  #   tls: true
+  #   udp: true
+  #   flow: xtls-rprx-vision
+  #   servername: www.microsoft.com
+  #   client-fingerprint: chrome
+  #   reality-opts:
+  #     public-key: YOUR_REALITY_PUBLIC_KEY
+  #     short-id: YOUR_SHORT_ID
+
+proxy-groups:
+  - name: PROXY
+    type: select
+    proxies:
+      - Upstream-HTTP
+      # - Upstream-VLESS-Reality
+      - DIRECT
+
+  - name: Apple
+    type: select
+    proxies:
+      - PROXY
+      - DIRECT
+
+  - name: FINAL
+    type: select
+    proxies:
+      - PROXY
+      - DIRECT
+
+rules:
+  # Keep LAN / phone local stuff off the proxy
+  - GEOIP,LAN,DIRECT,no-resolve
+  - IP-CIDR,127.0.0.0/8,DIRECT,no-resolve
+  - IP-CIDR,10.0.0.0/8,DIRECT,no-resolve
+  - IP-CIDR,172.16.0.0/12,DIRECT,no-resolve
+  - IP-CIDR,192.168.0.0/16,DIRECT,no-resolve
+  - IP-CIDR,169.254.0.0/16,DIRECT,no-resolve
+  - IP-CIDR,224.0.0.0/4,DIRECT,no-resolve
+  - IP-CIDR6,fe80::/10,DIRECT,no-resolve
+  - IP-CIDR6,fc00::/7,DIRECT,no-resolve
+
+  # Captive portal / OS connectivity checks
+  - DOMAIN,captive.apple.com,DIRECT
+  - DOMAIN,connectivitycheck.gstatic.com,DIRECT
+  - DOMAIN,www.gstatic.com,DIRECT
+  - DOMAIN,clients3.google.com,DIRECT
+  - DOMAIN-SUFFIX,msftconnecttest.com,DIRECT
+  - DOMAIN-SUFFIX,msftncsi.com,DIRECT
+
+  # Private DNS / multicast — stay local
+  - DOMAIN-SUFFIX,local,DIRECT
+  - DOMAIN-SUFFIX,lan,DIRECT
+  - DOMAIN-SUFFIX,home.arpa,DIRECT
+
+  # Apple realtime (FaceTime/iMessage media) needs UDP.
+  # HTTP CONNECT cannot carry UDP — leave these DIRECT unless you add VLESS/WG.
+  - PROCESS-NAME,facetime,Apple
+  - PROCESS-NAME,avconferenced,Apple
+  - DOMAIN-SUFFIX,facetime.apple.com,Apple
+  - DOMAIN-SUFFIX,push-apple.com.akadns.net,Apple
+  - DOMAIN-KEYWORD,icloud-content,Apple
+  - DOMAIN-SUFFIX,apple-dns.net,Apple
+
+  # Everything else through your upstream
+  - MATCH,FINAL

@@ -39,3 +39,9 @@ Nothing sensitive is committed; secrets are injected at CI build time into `Buil
 ```
 
 APK: `app/build/outputs/apk/debug/app-debug.apk`
+
+## Client profiles
+
+Drop-in **MetaClash** + **Shadowrocket** configs that use the same upstream HTTP proxy:
+
+See [`profiles/README.md`](profiles/README.md).

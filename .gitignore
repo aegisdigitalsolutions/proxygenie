@@ -8,3 +8,7 @@ captures/
 .cxx/
 *.apk
 *.keystore
+
+# Local proxy credentials (never commit)
+profiles/upstream.env
+profiles/out/
