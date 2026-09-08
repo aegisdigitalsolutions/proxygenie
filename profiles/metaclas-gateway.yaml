@@ -1,16 +1,19 @@
-# MetaClash / FlClash / mihomo — Proxygenie loadout
-# 10-device hotspot? Use metaclas-gateway.yaml + HOTSPOT.md instead.
-# Same upstream HTTP CONNECT as LaneNode. Fill __UPSTREAM_*__ then import & go.
+# MetaClash GATEWAY loadout — phone aggregates ~10 LAN devices
+# Fill __UPSTREAM_*__ + change lane:CHANGE_ME_LAN_PASS then import & go.
 #
-# This is the substantial Meta-style profile: TUN, fake-ip, sniffer,
-# MetaCubeX rule-providers, split groups. Beats consumer VPN mush by
-# routing smart over YOUR proxy path — not by inventing fake Reality.
+# Other devices → socks5://PHONE_LAN_IP:7891  (user lane / pass you set)
+# Do NOT let them browse raw through the hotspot NAT — that is throttle bait.
+# tcp-concurrent off + LaneNode-style discipline = less uplink stampede.
+# See profiles/HOTSPOT.md
 
 mixed-port: 7890
 socks-port: 7891
 redir-port: 7892
 tproxy-port: 7893
-allow-lan: false
+allow-lan: true
+# LAN clients (the other ~9 devices) must authenticate — change this password
+authentication:
+  - "lane:CHANGE_ME_LAN_PASS"
 bind-address: "*"
 mode: rule
 log-level: warning

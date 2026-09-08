@@ -1,45 +1,44 @@
 # Client profiles — Proxygenie loadout
 
-This is the Meta-style bump without fake Reality: **your pro HTTP CONNECT
-upstream** + real Clash Meta / Shadowrocket routing (rule-providers, split
-groups, fake-ip/DoH, TUN). That combo is what kicks consumer VPN mush —
-ExpressVPN is one dumb tunnel; this is smart routing over a path you control.
+## Fighting hotspot hell (read this)
+
+10 devices on one carrier hotspot = bufferbloat + throttle.
+
+**Fix:** one Android gateway aggregates everyone over SOCKS; pace the uplink;
+only that phone faces the carrier / pro proxy.
+
+→ **[`HOTSPOT.md`](HOTSPOT.md)**
 
 ## Fast path
 
-1. Replace `__UPSTREAM_HOST__` `__UPSTREAM_PORT__` `__UPSTREAM_USER__` `__UPSTREAM_PASS__`  
-   (same values as LaneNode / GitHub Actions secrets).
-2. **Android:** import `metaclas.yaml` into MetaClash / FlClash → start TUN.  
-3. **iPhone:** import `shadowrocket.conf` → Connect (prefer cellular if Wi-Fi jitter sucks).
+| Role | Profile |
+|------|---------|
+| Android **gateway** (10 devices) | `metaclas-gateway.yaml` **or** LaneNode APK v1.1 |
+| iPhone **via gateway** | `shadowrocket-via-gateway.conf` |
+| Solo phone (no LAN flock) | `metaclas.yaml` / `shadowrocket.conf` |
 
-Or:
+1. Replace `__UPSTREAM_*__` (and `__GATEWAY_HOST__` / LAN pass for gateway mode).  
+2. Or `./profiles/render.sh` after editing `upstream.env`.  
+3. Import → connect.
 
-```bash
-cp profiles/upstream.env.example profiles/upstream.env
-# edit real values
-./profiles/render.sh
-# use profiles/out/*
-```
+## What’s inside the Meta loadout
 
-## What’s inside
+TUN, sniffer, fake-ip/DoH, MetaCubeX geo, Loyalsoldier rule-sets, split groups  
+(Streaming / Apple / Google / Telegram / AI / Games). `tcp-concurrent` off to
+reduce uplink stampede.
 
-| Piece | Why it matters |
-|-------|----------------|
-| TUN + sniffer + fake-ip | Whole-device traffic, correct SNI, fast dial |
-| MetaCubeX geo + Loyalsoldier rule-sets | The “MetaClash feels proprietary” part — real domain intelligence |
-| Groups: PROXY / Streaming / Apple / Google / Telegram / AI / Games | Flip one category without nuking everything |
-| Ads → REJECT | Less junk on the pipe |
-| LAN / captive → DIRECT | Phone stays usable on home Wi-Fi |
+## Honest limits
 
-## Reality (still)
-
-- Upstream is **HTTP CONNECT** (LaneNode port `20027`). No invented VLESS.
-- UDP (FaceTime media, some games) is weak over HTTP — Apple group can go DIRECT if calls flake; add a real VLESS/Hysteria/WG node later for UDP.
-- First MetaClash start downloads geo + rule-sets (needs network once).
+- Upstream is still **HTTP CONNECT** until pro support gives TLS/VLESS/Hysteria.  
+- Aggregation + upload pacing fixes bufferbloat **now**.  
+- Obfuscation on the phone→proxy hop is the next rung for DPI/throttle.
 
 ## Files
 
-- `metaclas.yaml` — Android MetaClash / FlClash  
-- `shadowrocket.conf` — iPhone full config  
-- `shadowrocket-proxy.txt` — one-line HTTP server URI  
-- `render.sh` / `upstream.env.example` — fill secrets without committing them  
+- `HOTSPOT.md` — architecture  
+- `metaclas-gateway.yaml` — allow-lan aggregator  
+- `metaclas.yaml` — full Meta solo/client  
+- `shadowrocket-via-gateway.conf` — iPhone → gateway  
+- `shadowrocket.conf` — iPhone → upstream  
+- `shadowrocket-proxy.txt` — one-line HTTP URI  
+- `render.sh` / `upstream.env.example`  

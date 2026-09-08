@@ -42,6 +42,9 @@ APK: `app/build/outputs/apk/debug/app-debug.apk`
 
 ## Client profiles
 
-Drop-in **MetaClash** + **Shadowrocket** configs that use the same upstream HTTP proxy:
+Drop-in **MetaClash** + **Shadowrocket** configs, plus hotspot aggregation guide:
 
-See [`profiles/README.md`](profiles/README.md).
+See [`profiles/README.md`](profiles/README.md) and [`profiles/HOTSPOT.md`](profiles/HOTSPOT.md).
+
+LaneNode **v1.1** adds max-flow caps and upload pacing so ~10 LAN clients
+don’t destroy the cellular uplink.
