@@ -42,9 +42,8 @@ APK: `app/build/outputs/apk/debug/app-debug.apk`
 
 ## Client profiles
 
-Drop-in **MetaClash** + **Shadowrocket** configs, plus hotspot aggregation guide:
+**MetaClash → LaneNode tunnel** on the S26: start LaneNode, then import
+`profiles/metaclas-chained.yaml` into MetaClash. iPhones use
+`profiles/shadowrocket-via-gateway.conf`.
 
-See [`profiles/README.md`](profiles/README.md) and [`profiles/HOTSPOT.md`](profiles/HOTSPOT.md).
-
-LaneNode **v1.1** adds max-flow caps and upload pacing so ~10 LAN clients
-don’t destroy the cellular uplink.
+See [`profiles/HOTSPOT.md`](profiles/HOTSPOT.md).

@@ -1,10 +1,11 @@
-# DEPRECATED for your setup — use metaclas-chained.yaml (MetaClash → LaneNode).
-# MetaClash GATEWAY loadout — phone aggregates ~10 LAN devices
-# Fill __UPSTREAM_*__ + change lane:CHANGE_ME_LAN_PASS then import & go.
+# MetaClash → LaneNode CHAIN (the real loadout)
+# S26 runs BOTH: LaneNode first, then MetaClash with this profile.
 #
-# Other devices → socks5://PHONE_LAN_IP:7891  (user lane / pass you set)
-# Do NOT let them browse raw through the hotspot NAT — that is throttle bait.
-# tcp-concurrent off + LaneNode-style discipline = less uplink stampede.
+#   kids/iPhones → MetaClash :7891  →  LaneNode :8899  →  pro upstream  →  net
+#                  (TUN + rules)       (cellular bind + upload pace + CONNECT)
+#
+# Upstream host/user/pass go in LANE NODE only (the four secrets).
+# Here: only change lane:CHANGE_ME_LAN_PASS for LAN clients.
 # See profiles/HOTSPOT.md
 
 mixed-port: 7890
@@ -118,35 +119,19 @@ sniffer:
       ports: [443]
 
 proxies:
-  - name: Pro-HTTP
-    type: http
-    server: __UPSTREAM_HOST__
-    port: __UPSTREAM_PORT__
-    username: __UPSTREAM_USER__
-    password: __UPSTREAM_PASS__
-
-  # Drop a real VLESS/Hysteria/WG node here later — leave commented until then.
-  # - name: Pro-VLESS
-  #   type: vless
-  #   server: YOUR_HOST
-  #   port: 443
-  #   uuid: YOUR_UUID
-  #   network: tcp
-  #   tls: true
-  #   udp: true
-  #   flow: xtls-rprx-vision
-  #   servername: www.microsoft.com
-  #   client-fingerprint: chrome
-  #   reality-opts:
-  #     public-key: YOUR_PUBLIC_KEY
-  #     short-id: YOUR_SHORT_ID
+  # LaneNode on THIS phone — start LaneNode before MetaClash
+  - name: LaneNode
+    type: socks5
+    server: 127.0.0.1
+    port: 8899
+    # UDP associate not supported end-to-end through LaneNode HTTP CONNECT
+    udp: false
 
 proxy-groups:
   - name: PROXY
     type: select
     proxies:
-      - Pro-HTTP
-      # - Pro-VLESS
+      - LaneNode
       - DIRECT
 
   - name: Streaming

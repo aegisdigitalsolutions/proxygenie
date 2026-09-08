@@ -35,13 +35,13 @@ render() {
 
 render metaclas.yaml metaclas.yaml
 render metaclas-gateway.yaml metaclas-gateway.yaml
+render metaclas-chained.yaml metaclas-chained.yaml
 render shadowrocket.conf shadowrocket.conf
 render shadowrocket-via-gateway.conf shadowrocket-via-gateway.conf
 render shadowrocket-proxy.txt shadowrocket-proxy.txt
 
 echo
 echo "Import from profiles/out/ (secrets filled — do not commit)"
-echo "  Gateway phone:  metaclas-gateway.yaml  OR  LaneNode APK"
-echo "  iPhone clients: shadowrocket-via-gateway.conf"
-echo "  Solo travel:    metaclas.yaml / shadowrocket.conf"
+echo "  S26 chain:      START LaneNode, then MetaClash + metaclas-chained.yaml"
+echo "  iPhone clients: shadowrocket-via-gateway.conf → S26:7891"
 echo "  Read:           profiles/HOTSPOT.md"

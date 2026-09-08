@@ -1,44 +1,17 @@
-# Client profiles — Proxygenie loadout
+# Client profiles
 
-## Fighting hotspot hell (read this)
+**Canonical setup:** MetaClash on the S26, with **LaneNode as its tunnel**.
 
-10 devices on one carrier hotspot = bufferbloat + throttle.
+1. Start **LaneNode** (four `UPSTREAM_*` secrets + upload cap).  
+2. Import **`metaclas-chained.yaml`** into MetaClash → start TUN.  
+3. iPhones: **`shadowrocket-via-gateway.conf`** → S26 `:7891`.
 
-**Fix:** one Android gateway aggregates everyone over SOCKS; pace the uplink;
-only that phone faces the carrier / pro proxy.
+Details: [`HOTSPOT.md`](HOTSPOT.md)
 
-→ **[`HOTSPOT.md`](HOTSPOT.md)**
-
-## Fast path
-
-| Role | Profile |
-|------|---------|
-| Android **gateway** (10 devices) | `metaclas-gateway.yaml` **or** LaneNode APK v1.1 |
-| iPhone **via gateway** | `shadowrocket-via-gateway.conf` |
-| Solo phone (no LAN flock) | `metaclas.yaml` / `shadowrocket.conf` |
-
-1. Replace `__UPSTREAM_*__` (and `__GATEWAY_HOST__` / LAN pass for gateway mode).  
-2. Or `./profiles/render.sh` after editing `upstream.env`.  
-3. Import → connect.
-
-## What’s inside the Meta loadout
-
-TUN, sniffer, fake-ip/DoH, MetaCubeX geo, Loyalsoldier rule-sets, split groups  
-(Streaming / Apple / Google / Telegram / AI / Games). `tcp-concurrent` off to
-reduce uplink stampede.
-
-## Honest limits
-
-- Upstream is still **HTTP CONNECT** until pro support gives TLS/VLESS/Hysteria.  
-- Aggregation + upload pacing fixes bufferbloat **now**.  
-- Obfuscation on the phone→proxy hop is the next rung for DPI/throttle.
-
-## Files
-
-- `HOTSPOT.md` — architecture  
-- `metaclas-gateway.yaml` — allow-lan aggregator  
-- `metaclas.yaml` — full Meta solo/client  
-- `shadowrocket-via-gateway.conf` — iPhone → gateway  
-- `shadowrocket.conf` — iPhone → upstream  
-- `shadowrocket-proxy.txt` — one-line HTTP URI  
-- `render.sh` / `upstream.env.example`  
+| File | Role |
+|------|------|
+| `metaclas-chained.yaml` | **Use this** — MetaClash → LaneNode |
+| `shadowrocket-via-gateway.conf` | iPhone → S26 MetaClash |
+| `metaclas.yaml` / `shadowrocket.conf` | Solo / travel (no LaneNode) |
+| `metaclas-gateway.yaml` | MetaClash straight to upstream (no LaneNode) |
+| `render.sh` / `upstream.env.example` | Fill placeholders locally |
