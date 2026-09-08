@@ -1,44 +1,45 @@
-# Client profiles (drop-in)
+# Client profiles — Proxygenie loadout
 
-Your upstream today is an **HTTP CONNECT** proxy (LaneNode secrets / port `20027`).
-These profiles route **MetaClash / FlClash** (Android) and **Shadowrocket** (iPhone) through that same proxy.
+This is the Meta-style bump without fake Reality: **your pro HTTP CONNECT
+upstream** + real Clash Meta / Shadowrocket routing (rule-providers, split
+groups, fake-ip/DoH, TUN). That combo is what kicks consumer VPN mush —
+ExpressVPN is one dumb tunnel; this is smart routing over a path you control.
 
-VLESS/Reality cannot be invented client-side — it needs a real Xray node. Optional stubs are commented in both configs for when you add one.
+## Fast path
 
-## Fast path (phone edit)
+1. Replace `__UPSTREAM_HOST__` `__UPSTREAM_PORT__` `__UPSTREAM_USER__` `__UPSTREAM_PASS__`  
+   (same values as LaneNode / GitHub Actions secrets).
+2. **Android:** import `metaclas.yaml` into MetaClash / FlClash → start TUN.  
+3. **iPhone:** import `shadowrocket.conf` → Connect (prefer cellular if Wi-Fi jitter sucks).
 
-1. Open `metaclas.yaml` / `shadowrocket.conf`
-2. Replace `__UPSTREAM_HOST__`, `__UPSTREAM_PORT__`, `__UPSTREAM_USER__`, `__UPSTREAM_PASS__`
-3. Import → hit connect
-
-## Or render once on a computer
+Or:
 
 ```bash
 cp profiles/upstream.env.example profiles/upstream.env
 # edit real values
 ./profiles/render.sh
-# use files under profiles/out/
+# use profiles/out/*
 ```
 
-`upstream.env` and `profiles/out/` are gitignored.
+## What’s inside
 
-## Android — MetaClash / FlClash
+| Piece | Why it matters |
+|-------|----------------|
+| TUN + sniffer + fake-ip | Whole-device traffic, correct SNI, fast dial |
+| MetaCubeX geo + Loyalsoldier rule-sets | The “MetaClash feels proprietary” part — real domain intelligence |
+| Groups: PROXY / Streaming / Apple / Google / Telegram / AI / Games | Flip one category without nuking everything |
+| Ads → REJECT | Less junk on the pipe |
+| LAN / captive → DIRECT | Phone stays usable on home Wi-Fi |
 
-Import `metaclas.yaml` → select profile → start TUN/VPN → group **PROXY** = `Upstream-HTTP`.
+## Reality (still)
 
-## iPhone — Shadowrocket
+- Upstream is **HTTP CONNECT** (LaneNode port `20027`). No invented VLESS.
+- UDP (FaceTime media, some games) is weak over HTTP — Apple group can go DIRECT if calls flake; add a real VLESS/Hysteria/WG node later for UDP.
+- First MetaClash start downloads geo + rule-sets (needs network once).
 
-- **Full:** import `shadowrocket.conf` as Config → connect  
-- **Server only:** paste `shadowrocket-proxy.txt` as an HTTP server, then Global or attach rules
+## Files
 
-Turn on cellular / prefer-cellular when Wi-Fi upload/jitter is bad.
-
-## Reality check
-
-| Helps | Does not fix alone |
-|------|---------------------|
-| Stable egress via your proxy | Raw Wi-Fi bufferbloat on DIRECT |
-| DoH + fake-ip + concurrent dial | UDP (FaceTime media) over HTTP CONNECT |
-| LAN stays DIRECT | Need VLESS/Hysteria/WG for real UDP tunnel |
-
-FaceTime-ish domains sit on the **Apple** group (PROXY or DIRECT) because HTTP CONNECT is TCP-only. After you add a UDP-capable node, point PROXY/Apple at it.
+- `metaclas.yaml` — Android MetaClash / FlClash  
+- `shadowrocket.conf` — iPhone full config  
+- `shadowrocket-proxy.txt` — one-line HTTP server URI  
+- `render.sh` / `upstream.env.example` — fill secrets without committing them  

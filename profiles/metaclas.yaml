@@ -1,9 +1,9 @@
-# MetaClash / FlClash / Clash Meta (mihomo) — drop-in profile
-# Renders from render.sh → metaclas.yaml
+# MetaClash / FlClash / mihomo — Proxygenie loadout
+# Same upstream HTTP CONNECT as LaneNode. Fill __UPSTREAM_*__ then import & go.
 #
-# Uses your existing HTTP CONNECT upstream (LaneNode / GitHub secrets).
-# This is NOT a VLESS/Reality node — those need a separate Xray endpoint.
-# Optional VLESS stub is at the bottom if you add one later.
+# This is the substantial Meta-style profile: TUN, fake-ip, sniffer,
+# MetaCubeX rule-providers, split groups. Beats consumer VPN mush by
+# routing smart over YOUR proxy path — not by inventing fake Reality.
 
 mixed-port: 7890
 socks-port: 7891
@@ -12,16 +12,27 @@ tproxy-port: 7893
 allow-lan: false
 bind-address: "*"
 mode: rule
-log-level: info
+log-level: warning
 ipv6: false
 unified-delay: true
 tcp-concurrent: true
 find-process-mode: off
 global-client-fingerprint: chrome
 keep-alive-interval: 15
+keep-alive-idle: 15
 profile:
   store-selected: true
   store-fake-ip: true
+
+# Fresh GeoIP / Geosite (MetaCubeX) — MetaClash downloads on first start
+geodata-mode: true
+geo-auto-update: true
+geo-update-interval: 24
+geox-url:
+  geoip: "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/geoip.dat"
+  geosite: "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/geosite.dat"
+  mmdb: "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/country.mmdb"
+  asn: "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/GeoLite2-ASN.mmdb"
 
 tun:
   enable: true
@@ -33,6 +44,7 @@ tun:
   auto-detect-interface: true
   strict-route: true
   mtu: 1500
+  endpoint-independent-nat: true
 
 dns:
   enable: true
@@ -43,28 +55,48 @@ dns:
   fake-ip-filter:
     - "*.lan"
     - "*.local"
-    - localhost
+    - "*.home.arpa"
+    - "localhost"
     - "*.localhost"
     - "+.svc.cluster.local"
     - "time.*.com"
     - "ntp.*.com"
+    - "+.pool.ntp.org"
     - "stun.*.*"
     - "stun.*.*.*"
+    - "turn.*.*"
+    - "+.stun.playstation.net"
+    - "xbox.*.*.microsoft.com"
+    - "*.msftncsi.com"
+    - "www.msftconnecttest.com"
   default-nameserver:
     - 1.1.1.1
     - 8.8.8.8
   nameserver:
     - https://1.1.1.1/dns-query
     - https://8.8.8.8/dns-query
-  fallback:
     - https://9.9.9.9/dns-query
-    - tls://1.0.0.1:853
+  fallback:
+    - https://1.0.0.1/dns-query
+    - tls://dns.google:853
+  proxy-server-nameserver:
+    - https://1.1.1.1/dns-query
+    - 8.8.8.8
   fallback-filter:
     geoip: true
     geoip-code: CN
+    geosite:
+      - gfw
     ipcidr:
       - 240.0.0.0/4
-  respect-rules: false
+  nameserver-policy:
+    "geosite:private":
+      - system
+      - 1.1.1.1
+    "geosite:apple":
+      - https://1.1.1.1/dns-query
+    "geosite:google":
+      - https://8.8.8.8/dns-query
 
 sniffer:
   enable: true
@@ -74,26 +106,24 @@ sniffer:
   sniff:
     HTTP:
       ports: [80, 8080-8880]
+      override-destination: true
     TLS:
       ports: [443, 8443]
     QUIC:
       ports: [443]
 
 proxies:
-  - name: Upstream-HTTP
+  - name: Pro-HTTP
     type: http
     server: __UPSTREAM_HOST__
     port: __UPSTREAM_PORT__
     username: __UPSTREAM_USER__
     password: __UPSTREAM_PASS__
-    # skip-cert-verify only if your upstream is HTTPS-proxy with a bad cert
-    # tls: true
-    # skip-cert-verify: true
 
-  # --- Optional: fill ONLY if you later stand up a real VLESS/Reality node ---
-  # - name: Upstream-VLESS-Reality
+  # Drop a real VLESS/Hysteria/WG node here later — leave commented until then.
+  # - name: Pro-VLESS
   #   type: vless
-  #   server: YOUR_VLESS_HOST
+  #   server: YOUR_HOST
   #   port: 443
   #   uuid: YOUR_UUID
   #   network: tcp
@@ -103,18 +133,48 @@ proxies:
   #   servername: www.microsoft.com
   #   client-fingerprint: chrome
   #   reality-opts:
-  #     public-key: YOUR_REALITY_PUBLIC_KEY
+  #     public-key: YOUR_PUBLIC_KEY
   #     short-id: YOUR_SHORT_ID
 
 proxy-groups:
   - name: PROXY
     type: select
     proxies:
-      - Upstream-HTTP
-      # - Upstream-VLESS-Reality
+      - Pro-HTTP
+      # - Pro-VLESS
+      - DIRECT
+
+  - name: Streaming
+    type: select
+    proxies:
+      - PROXY
       - DIRECT
 
   - name: Apple
+    type: select
+    proxies:
+      - PROXY
+      - DIRECT
+
+  - name: Google
+    type: select
+    proxies:
+      - PROXY
+      - DIRECT
+
+  - name: Telegram
+    type: select
+    proxies:
+      - PROXY
+      - DIRECT
+
+  - name: AI
+    type: select
+    proxies:
+      - PROXY
+      - DIRECT
+
+  - name: Games
     type: select
     proxies:
       - PROXY
@@ -126,39 +186,139 @@ proxy-groups:
       - PROXY
       - DIRECT
 
+# Remote domain sets — cached locally after first pull
+rule-providers:
+  reject:
+    type: http
+    behavior: domain
+    url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/reject.txt"
+    path: ./ruleset/reject.yaml
+    interval: 86400
+
+  icloud:
+    type: http
+    behavior: domain
+    url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/icloud.txt"
+    path: ./ruleset/icloud.yaml
+    interval: 86400
+
+  apple:
+    type: http
+    behavior: domain
+    url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/apple.txt"
+    path: ./ruleset/apple.yaml
+    interval: 86400
+
+  google:
+    type: http
+    behavior: domain
+    url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/google.txt"
+    path: ./ruleset/google.yaml
+    interval: 86400
+
+  proxy:
+    type: http
+    behavior: domain
+    url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/proxy.txt"
+    path: ./ruleset/proxy.yaml
+    interval: 86400
+
+  direct:
+    type: http
+    behavior: domain
+    url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/direct.txt"
+    path: ./ruleset/direct.yaml
+    interval: 86400
+
+  private:
+    type: http
+    behavior: domain
+    url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/private.txt"
+    path: ./ruleset/private.yaml
+    interval: 86400
+
+  telegramcidr:
+    type: http
+    behavior: ipcidr
+    url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/telegramcidr.txt"
+    path: ./ruleset/telegramcidr.yaml
+    interval: 86400
+
+  applications:
+    type: http
+    behavior: classical
+    url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/applications.txt"
+    path: ./ruleset/applications.yaml
+    interval: 86400
+
 rules:
-  # Keep LAN / phone local stuff off the proxy
+  # Ads / junk
+  - RULE-SET,reject,REJECT
+
+  # Local / LAN first
+  - RULE-SET,private,DIRECT
+  - RULE-SET,applications,DIRECT
   - GEOIP,LAN,DIRECT,no-resolve
   - IP-CIDR,127.0.0.0/8,DIRECT,no-resolve
   - IP-CIDR,10.0.0.0/8,DIRECT,no-resolve
   - IP-CIDR,172.16.0.0/12,DIRECT,no-resolve
   - IP-CIDR,192.168.0.0/16,DIRECT,no-resolve
   - IP-CIDR,169.254.0.0/16,DIRECT,no-resolve
-  - IP-CIDR,224.0.0.0/4,DIRECT,no-resolve
   - IP-CIDR6,fe80::/10,DIRECT,no-resolve
   - IP-CIDR6,fc00::/7,DIRECT,no-resolve
 
-  # Captive portal / OS connectivity checks
+  # Captive / OS health checks
   - DOMAIN,captive.apple.com,DIRECT
   - DOMAIN,connectivitycheck.gstatic.com,DIRECT
-  - DOMAIN,www.gstatic.com,DIRECT
   - DOMAIN,clients3.google.com,DIRECT
   - DOMAIN-SUFFIX,msftconnecttest.com,DIRECT
   - DOMAIN-SUFFIX,msftncsi.com,DIRECT
 
-  # Private DNS / multicast — stay local
-  - DOMAIN-SUFFIX,local,DIRECT
-  - DOMAIN-SUFFIX,lan,DIRECT
-  - DOMAIN-SUFFIX,home.arpa,DIRECT
+  # AI / chat
+  - GEOSITE,openai,AI
+  - GEOSITE,anthropic,AI
+  - DOMAIN-SUFFIX,chatgpt.com,AI
+  - DOMAIN-SUFFIX,claude.ai,AI
+  - DOMAIN-SUFFIX,cursor.sh,AI
+  - DOMAIN-SUFFIX,cursor.com,AI
 
-  # Apple realtime (FaceTime/iMessage media) needs UDP.
-  # HTTP CONNECT cannot carry UDP — leave these DIRECT unless you add VLESS/WG.
-  - PROCESS-NAME,facetime,Apple
-  - PROCESS-NAME,avconferenced,Apple
-  - DOMAIN-SUFFIX,facetime.apple.com,Apple
-  - DOMAIN-SUFFIX,push-apple.com.akadns.net,Apple
-  - DOMAIN-KEYWORD,icloud-content,Apple
-  - DOMAIN-SUFFIX,apple-dns.net,Apple
+  # Messaging
+  - RULE-SET,telegramcidr,Telegram
+  - GEOSITE,telegram,Telegram
+  - GEOSITE,discord,PROXY
 
-  # Everything else through your upstream
+  # Google / YouTube
+  - RULE-SET,google,Google
+  - GEOSITE,google,Google
+  - GEOSITE,youtube,Streaming
+  - GEOSITE,netflix,Streaming
+  - GEOSITE,disney,Streaming
+  - GEOSITE,spotify,Streaming
+  - GEOSITE,tiktok,Streaming
+  - GEOSITE,bahamut,Streaming
+
+  # Games (TCP game traffic / stores — UDP still limited on HTTP)
+  - GEOSITE,steam,Games
+  - GEOSITE,epicgames,Games
+  - DOMAIN-SUFFIX,playstation.com,Games
+  - DOMAIN-SUFFIX,xboxlive.com,Games
+
+  # Apple — FaceTime media is UDP; leave Apple on PROXY for TCP APIs,
+  # flip to DIRECT in-app if calls flake until you add a UDP node.
+  - RULE-SET,icloud,Apple
+  - RULE-SET,apple,Apple
+  - GEOSITE,apple,Apple
+  - GEOSITE,apple-cn,DIRECT
+
+  # Classic proxy list (GFW / blocked / should-proxy domains)
+  - RULE-SET,proxy,PROXY
+  - GEOSITE,gfw,PROXY
+  - GEOSITE,greatfire,PROXY
+
+  # Known direct / domestic-style lists
+  - RULE-SET,direct,DIRECT
+  - GEOSITE,cn,DIRECT
+  - GEOIP,CN,DIRECT
+
+  # Default: your pro proxy wins
   - MATCH,FINAL
