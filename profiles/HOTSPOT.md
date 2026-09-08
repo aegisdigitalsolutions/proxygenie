@@ -15,6 +15,14 @@ LaneNode is **not** the app you live in. It’s the **tunnel MetaClash dials**.
    your upstream proxy
 ```
 
+## If the phone is choking / LaneNode shows hundreds of errors
+
+**Stop MetaClash first, then LaneNode.** That restores normal data/SMS.
+
+Cause: MetaClash TUN was swallowing LaneNode’s own upstream sockets
+(Clash → LaneNode → Clash loop). Fixed profile excludes `org.lanenode`
+from TUN — re-import **`metaclas-chained.yaml`** after pulling the update.
+
 ## S26 boot order
 
 1. **LaneNode** — put the four secrets here (`UPSTREAM_HOST/PORT/USER/PASS`), set upload cap, **Start**, wait for cellular UP.  

@@ -22,7 +22,8 @@ log-level: warning
 ipv6: false
 unified-delay: true
 tcp-concurrent: false
-find-process-mode: off
+# Need process matching so LaneNode's own sockets are not sucked into TUN
+find-process-mode: always
 global-client-fingerprint: chrome
 keep-alive-interval: 15
 keep-alive-idle: 15
@@ -51,6 +52,10 @@ tun:
   strict-route: true
   mtu: 1500
   endpoint-independent-nat: true
+  # CRITICAL: if LaneNode is inside the TUN, every upstream CONNECT
+  # loops Clash→LaneNode→Clash and you get hundreds of errors in minutes.
+  exclude-package:
+    - org.lanenode
 
 dns:
   enable: true
@@ -242,6 +247,12 @@ rule-providers:
     interval: 86400
 
 rules:
+  # Loop breakers first — LaneNode must reach the real upstream off-TUN
+  - PROCESS-NAME,org.lanenode,DIRECT
+  - PROCESS-NAME,lanenode,DIRECT
+  - IP-CIDR,127.0.0.0/8,DIRECT,no-resolve
+  - IP-CIDR,::1/128,DIRECT,no-resolve
+
   # Ads / junk
   - RULE-SET,reject,REJECT
 
@@ -249,7 +260,6 @@ rules:
   - RULE-SET,private,DIRECT
   - RULE-SET,applications,DIRECT
   - GEOIP,LAN,DIRECT,no-resolve
-  - IP-CIDR,127.0.0.0/8,DIRECT,no-resolve
   - IP-CIDR,10.0.0.0/8,DIRECT,no-resolve
   - IP-CIDR,172.16.0.0/12,DIRECT,no-resolve
   - IP-CIDR,192.168.0.0/16,DIRECT,no-resolve
