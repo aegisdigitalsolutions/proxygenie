@@ -54,8 +54,25 @@ tun:
   endpoint-independent-nat: true
   # CRITICAL: if LaneNode is inside the TUN, every upstream CONNECT
   # loops Clash→LaneNode→Clash and you get hundreds of errors in minutes.
+  # Also keep RCS / carrier messaging off the VPN so texts stay alive.
   exclude-package:
     - org.lanenode
+    - com.google.android.apps.messaging
+    - com.google.android.gms
+    - com.google.android.gsf
+    - com.samsung.android.messaging
+    - com.samsung.android.serversync
+    - com.samsung.android.cmc
+    - com.android.mms
+    - com.android.phone
+    - com.android.providers.telephony
+    - com.google.android.apps.carrier.carrierid
+    - com.google.android.carrier
+    - com.tmobile.pr.adapt
+    - com.tmobile.pr.mytmobile
+    - com.tmobile.services.nameid
+    - msg.safetycore
+    - com.msg.safetycore
 
 dns:
   enable: true
