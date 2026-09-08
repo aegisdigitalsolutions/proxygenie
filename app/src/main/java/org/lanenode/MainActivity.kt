@@ -80,6 +80,27 @@ class MainActivity : ComponentActivity() {
                     singleLine = true, modifier = Modifier.fillMaxWidth()
                 )
 
+                OutlinedTextField(
+                    value = cfg.maxActive.toString(),
+                    onValueChange = {
+                        cfg = cfg.copy(maxActive = it.toIntOrNull()?.coerceIn(1, 512) ?: 48)
+                    },
+                    label = { Text("Max active flows (anti-stampede)") },
+                    singleLine = true, modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = cfg.uploadKbps.toString(),
+                    onValueChange = {
+                        cfg = cfg.copy(uploadKbps = it.toIntOrNull()?.coerceAtLeast(0) ?: 1400)
+                    },
+                    label = { Text("Upload cap kbps (0=off; ~75% of cell up)") },
+                    singleLine = true, modifier = Modifier.fillMaxWidth()
+                )
+                Text(
+                    "Hotspot tip: point every device at this phone’s SOCKS — do NOT let them NAT raw through the hotspot. Carrier sees one phone; we pace the uplink so bufferbloat dies.",
+                    style = MaterialTheme.typography.bodySmall
+                )
+
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Button(onClick = {
                         Config.save(ctx, cfg)
@@ -101,7 +122,9 @@ class MainActivity : ComponentActivity() {
                     appendLine("cellular        ${if (b?.isUp == true) "UP" else "down"}")
                     appendLine("lan address     ${LaneService.lanAddress()}")
                     appendLine("listen          ${cfg.listenPort}")
-                    appendLine("active conns    ${s?.active?.get() ?: 0}")
+                    appendLine("active conns    ${s?.active?.get() ?: 0} / ${cfg.maxActive}")
+                    appendLine("rejected        ${s?.rejected?.get() ?: 0}")
+                    appendLine("upload cap      ${if (cfg.uploadKbps > 0) "${cfg.uploadKbps} kbps" else "off"}")
                     appendLine("uploaded        ${fmt(s?.up?.get() ?: 0)}")
                     appendLine("downloaded      ${fmt(s?.down?.get() ?: 0)}")
                     appendLine("errors          ${s?.errors?.get() ?: 0}")
@@ -112,8 +135,8 @@ class MainActivity : ComponentActivity() {
 
                 HorizontalDivider()
                 Text(
-                    "Point Surge at  socks5, ${LaneService.lanAddress()}, ${cfg.listenPort}\n" +
-                    "Traffic exits this phone's cellular radio, then your upstream proxy.",
+                    "Clients → socks5://${LaneService.lanAddress()}:${cfg.listenPort}\n" +
+                    "Phone apps can use MetaClash too; LAN devices should use this SOCKS, not bare hotspot NAT.",
                     style = MaterialTheme.typography.bodySmall
                 )
             }

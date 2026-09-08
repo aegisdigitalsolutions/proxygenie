@@ -26,10 +26,12 @@ class ProxyServer(
     @Volatile private var running = false
 
     private val pool = Executors.newCachedThreadPool()
+    private val upLimiter = RateLimiter(cfg.uploadKbps)
     val up = AtomicLong(0)
     val down = AtomicLong(0)
     val active = AtomicInteger(0)
     val errors = AtomicInteger(0)
+    val rejected = AtomicInteger(0)
 
     fun start() {
         if (running) return
@@ -60,6 +62,15 @@ class ProxyServer(
     // ---------------------------------------------------------------- client
 
     private fun handle(client: Socket) {
+        // Cap parallel flows — 10 devices opening everything at once is how
+        // you fill the cell uplink buffer and invite carrier scheduler death.
+        if (active.get() >= cfg.maxActive.coerceAtLeast(1)) {
+            rejected.incrementAndGet()
+            runCatching { client.close() }
+            onStat()
+            return
+        }
+
         active.incrementAndGet()
         var upstream: Socket? = null
         try {
@@ -206,22 +217,30 @@ class ProxyServer(
 
     private fun pump(client: Socket, upstream: Socket) {
         val t = Thread {
-            copy(client.getInputStream(), upstream.getOutputStream(), up)
+            // client → upstream is UPLOAD into the cell modem — pace this side
+            copy(client.getInputStream(), upstream.getOutputStream(), up, pace = true)
             runCatching { upstream.shutdownOutput() }
         }
         t.isDaemon = true
         t.start()
-        copy(upstream.getInputStream(), client.getOutputStream(), down)
+        copy(upstream.getInputStream(), client.getOutputStream(), down, pace = false)
         runCatching { client.shutdownOutput() }
         t.join(5_000)
     }
 
-    private fun copy(input: InputStream, output: OutputStream, counter: AtomicLong) {
-        val buf = ByteArray(32 * 1024)
+    private fun copy(
+        input: InputStream,
+        output: OutputStream,
+        counter: AtomicLong,
+        pace: Boolean
+    ) {
+        // Smaller chunks when pacing so the token bucket can breathe
+        val buf = ByteArray(if (pace && upLimiter.enabled) 8 * 1024 else 32 * 1024)
         try {
             while (true) {
                 val n = input.read(buf)
                 if (n <= 0) break
+                if (pace) upLimiter.take(n)
                 output.write(buf, 0, n)
                 output.flush()
                 counter.addAndGet(n.toLong())

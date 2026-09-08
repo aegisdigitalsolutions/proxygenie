@@ -1,0 +1,341 @@
+# MetaClash → LaneNode CHAIN (the real loadout)
+# S26 runs BOTH: LaneNode first, then MetaClash with this profile.
+#
+#   kids/iPhones → MetaClash :7891  →  LaneNode :8899  →  pro upstream  →  net
+#                  (TUN + rules)       (cellular bind + upload pace + CONNECT)
+#
+# Upstream host/user/pass go in LANE NODE only (the four secrets).
+# Here: only change lane:CHANGE_ME_LAN_PASS for LAN clients.
+# See profiles/HOTSPOT.md
+
+mixed-port: 7890
+socks-port: 7891
+redir-port: 7892
+tproxy-port: 7893
+allow-lan: true
+# LAN clients (the other ~9 devices) must authenticate — change this password
+authentication:
+  - "lane:CHANGE_ME_LAN_PASS"
+bind-address: "*"
+mode: rule
+log-level: warning
+ipv6: false
+unified-delay: true
+tcp-concurrent: false
+# Need process matching so LaneNode's own sockets are not sucked into TUN
+find-process-mode: always
+global-client-fingerprint: chrome
+keep-alive-interval: 15
+keep-alive-idle: 15
+profile:
+  store-selected: true
+  store-fake-ip: true
+
+# Fresh GeoIP / Geosite (MetaCubeX) — MetaClash downloads on first start
+geodata-mode: true
+geo-auto-update: true
+geo-update-interval: 24
+geox-url:
+  geoip: "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/geoip.dat"
+  geosite: "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/geosite.dat"
+  mmdb: "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/country.mmdb"
+  asn: "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/GeoLite2-ASN.mmdb"
+
+tun:
+  enable: true
+  stack: mixed
+  dns-hijack:
+    - any:53
+    - tcp://any:53
+  auto-route: true
+  auto-detect-interface: true
+  strict-route: true
+  mtu: 1500
+  endpoint-independent-nat: true
+  # CRITICAL: if LaneNode is inside the TUN, every upstream CONNECT
+  # loops Clash→LaneNode→Clash and you get hundreds of errors in minutes.
+  # Also keep RCS / carrier messaging off the VPN so texts stay alive.
+  exclude-package:
+    - org.lanenode
+    - com.google.android.apps.messaging
+    - com.google.android.gms
+    - com.google.android.gsf
+    - com.samsung.android.messaging
+    - com.samsung.android.serversync
+    - com.samsung.android.cmc
+    - com.android.mms
+    - com.android.phone
+    - com.android.providers.telephony
+    - com.google.android.apps.carrier.carrierid
+    - com.google.android.carrier
+    - com.tmobile.pr.adapt
+    - com.tmobile.pr.mytmobile
+    - com.tmobile.services.nameid
+    - msg.safetycore
+    - com.msg.safetycore
+
+dns:
+  enable: true
+  listen: 0.0.0.0:1053
+  ipv6: false
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.1/16
+  fake-ip-filter:
+    - "*.lan"
+    - "*.local"
+    - "*.home.arpa"
+    - "localhost"
+    - "*.localhost"
+    - "+.svc.cluster.local"
+    - "time.*.com"
+    - "ntp.*.com"
+    - "+.pool.ntp.org"
+    - "stun.*.*"
+    - "stun.*.*.*"
+    - "turn.*.*"
+    - "+.stun.playstation.net"
+    - "xbox.*.*.microsoft.com"
+    - "*.msftncsi.com"
+    - "www.msftconnecttest.com"
+  default-nameserver:
+    - 1.1.1.1
+    - 8.8.8.8
+  nameserver:
+    - https://1.1.1.1/dns-query
+    - https://8.8.8.8/dns-query
+    - https://9.9.9.9/dns-query
+  fallback:
+    - https://1.0.0.1/dns-query
+    - tls://dns.google:853
+  proxy-server-nameserver:
+    - https://1.1.1.1/dns-query
+    - 8.8.8.8
+  fallback-filter:
+    geoip: true
+    geoip-code: CN
+    geosite:
+      - gfw
+    ipcidr:
+      - 240.0.0.0/4
+  nameserver-policy:
+    "geosite:private":
+      - system
+      - 1.1.1.1
+    "geosite:apple":
+      - https://1.1.1.1/dns-query
+    "geosite:google":
+      - https://8.8.8.8/dns-query
+
+sniffer:
+  enable: true
+  force-dns-mapping: true
+  parse-pure-ip: true
+  override-destination: true
+  sniff:
+    HTTP:
+      ports: [80, 8080-8880]
+      override-destination: true
+    TLS:
+      ports: [443, 8443]
+    QUIC:
+      ports: [443]
+
+proxies:
+  # LaneNode on THIS phone — start LaneNode before MetaClash
+  - name: LaneNode
+    type: socks5
+    server: 127.0.0.1
+    port: 8899
+    # UDP associate not supported end-to-end through LaneNode HTTP CONNECT
+    udp: false
+
+proxy-groups:
+  - name: PROXY
+    type: select
+    proxies:
+      - LaneNode
+      - DIRECT
+
+  - name: Streaming
+    type: select
+    proxies:
+      - PROXY
+      - DIRECT
+
+  - name: Apple
+    type: select
+    proxies:
+      - PROXY
+      - DIRECT
+
+  - name: Google
+    type: select
+    proxies:
+      - PROXY
+      - DIRECT
+
+  - name: Telegram
+    type: select
+    proxies:
+      - PROXY
+      - DIRECT
+
+  - name: AI
+    type: select
+    proxies:
+      - PROXY
+      - DIRECT
+
+  - name: Games
+    type: select
+    proxies:
+      - PROXY
+      - DIRECT
+
+  - name: FINAL
+    type: select
+    proxies:
+      - PROXY
+      - DIRECT
+
+# Remote domain sets — cached locally after first pull
+rule-providers:
+  reject:
+    type: http
+    behavior: domain
+    url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/reject.txt"
+    path: ./ruleset/reject.yaml
+    interval: 86400
+
+  icloud:
+    type: http
+    behavior: domain
+    url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/icloud.txt"
+    path: ./ruleset/icloud.yaml
+    interval: 86400
+
+  apple:
+    type: http
+    behavior: domain
+    url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/apple.txt"
+    path: ./ruleset/apple.yaml
+    interval: 86400
+
+  google:
+    type: http
+    behavior: domain
+    url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/google.txt"
+    path: ./ruleset/google.yaml
+    interval: 86400
+
+  proxy:
+    type: http
+    behavior: domain
+    url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/proxy.txt"
+    path: ./ruleset/proxy.yaml
+    interval: 86400
+
+  direct:
+    type: http
+    behavior: domain
+    url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/direct.txt"
+    path: ./ruleset/direct.yaml
+    interval: 86400
+
+  private:
+    type: http
+    behavior: domain
+    url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/private.txt"
+    path: ./ruleset/private.yaml
+    interval: 86400
+
+  telegramcidr:
+    type: http
+    behavior: ipcidr
+    url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/telegramcidr.txt"
+    path: ./ruleset/telegramcidr.yaml
+    interval: 86400
+
+  applications:
+    type: http
+    behavior: classical
+    url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/applications.txt"
+    path: ./ruleset/applications.yaml
+    interval: 86400
+
+rules:
+  # Loop breakers first — LaneNode must reach the real upstream off-TUN
+  - PROCESS-NAME,org.lanenode,DIRECT
+  - PROCESS-NAME,lanenode,DIRECT
+  - IP-CIDR,127.0.0.0/8,DIRECT,no-resolve
+  - IP-CIDR,::1/128,DIRECT,no-resolve
+
+  # Ads / junk
+  - RULE-SET,reject,REJECT
+
+  # Local / LAN first
+  - RULE-SET,private,DIRECT
+  - RULE-SET,applications,DIRECT
+  - GEOIP,LAN,DIRECT,no-resolve
+  - IP-CIDR,10.0.0.0/8,DIRECT,no-resolve
+  - IP-CIDR,172.16.0.0/12,DIRECT,no-resolve
+  - IP-CIDR,192.168.0.0/16,DIRECT,no-resolve
+  - IP-CIDR,169.254.0.0/16,DIRECT,no-resolve
+  - IP-CIDR6,fe80::/10,DIRECT,no-resolve
+  - IP-CIDR6,fc00::/7,DIRECT,no-resolve
+
+  # Captive / OS health checks
+  - DOMAIN,captive.apple.com,DIRECT
+  - DOMAIN,connectivitycheck.gstatic.com,DIRECT
+  - DOMAIN,clients3.google.com,DIRECT
+  - DOMAIN-SUFFIX,msftconnecttest.com,DIRECT
+  - DOMAIN-SUFFIX,msftncsi.com,DIRECT
+
+  # AI / chat
+  - GEOSITE,openai,AI
+  - GEOSITE,anthropic,AI
+  - DOMAIN-SUFFIX,chatgpt.com,AI
+  - DOMAIN-SUFFIX,claude.ai,AI
+  - DOMAIN-SUFFIX,cursor.sh,AI
+  - DOMAIN-SUFFIX,cursor.com,AI
+
+  # Messaging
+  - RULE-SET,telegramcidr,Telegram
+  - GEOSITE,telegram,Telegram
+  - GEOSITE,discord,PROXY
+
+  # Google / YouTube
+  - RULE-SET,google,Google
+  - GEOSITE,google,Google
+  - GEOSITE,youtube,Streaming
+  - GEOSITE,netflix,Streaming
+  - GEOSITE,disney,Streaming
+  - GEOSITE,spotify,Streaming
+  - GEOSITE,tiktok,Streaming
+  - GEOSITE,bahamut,Streaming
+
+  # Games (TCP game traffic / stores — UDP still limited on HTTP)
+  - GEOSITE,steam,Games
+  - GEOSITE,epicgames,Games
+  - DOMAIN-SUFFIX,playstation.com,Games
+  - DOMAIN-SUFFIX,xboxlive.com,Games
+
+  # Apple — FaceTime media is UDP; leave Apple on PROXY for TCP APIs,
+  # flip to DIRECT in-app if calls flake until you add a UDP node.
+  - RULE-SET,icloud,Apple
+  - RULE-SET,apple,Apple
+  - GEOSITE,apple,Apple
+  - GEOSITE,apple-cn,DIRECT
+
+  # Classic proxy list (GFW / blocked / should-proxy domains)
+  - RULE-SET,proxy,PROXY
+  - GEOSITE,gfw,PROXY
+  - GEOSITE,greatfire,PROXY
+
+  # Known direct / domestic-style lists
+  - RULE-SET,direct,DIRECT
+  - GEOSITE,cn,DIRECT
+  - GEOIP,CN,DIRECT
+
+  # Default: your pro proxy wins
+  - MATCH,FINAL

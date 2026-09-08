@@ -8,7 +8,15 @@ data class Config(
     val upstreamHost: String = "",
     val upstreamPort: Int = 20027,
     val upstreamUser: String = "",
-    val upstreamPass: String = ""
+    val upstreamPass: String = "",
+    /** Cap parallel flows so 10 devices don't stampede the modem. */
+    val maxActive: Int = 48,
+    /**
+     * Aggregate uplink cap in kilobits/sec (shared across all flows).
+     * 0 = unlimited. Aim for ~75% of measured cell upload to kill bufferbloat.
+     * Example: ~2 Mbps cell → 1400–1600.
+     */
+    val uploadKbps: Int = 1400
 ) {
     companion object {
         private const val P = "lanenode"
@@ -24,7 +32,9 @@ data class Config(
                 upstreamUser = sp.getString("uUser", BuildConfig.UPSTREAM_USER)
                     ?: BuildConfig.UPSTREAM_USER,
                 upstreamPass = sp.getString("uPass", BuildConfig.UPSTREAM_PASS)
-                    ?: BuildConfig.UPSTREAM_PASS
+                    ?: BuildConfig.UPSTREAM_PASS,
+                maxActive = sp.getInt("maxActive", 48),
+                uploadKbps = sp.getInt("uploadKbps", 1400)
             )
         }
 
@@ -36,6 +46,8 @@ data class Config(
                 .putInt("uPort", c.upstreamPort)
                 .putString("uUser", c.upstreamUser)
                 .putString("uPass", c.upstreamPass)
+                .putInt("maxActive", c.maxActive)
+                .putInt("uploadKbps", c.uploadKbps)
                 .apply()
         }
     }

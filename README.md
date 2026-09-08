@@ -39,3 +39,11 @@ Nothing sensitive is committed; secrets are injected at CI build time into `Buil
 ```
 
 APK: `app/build/outputs/apk/debug/app-debug.apk`
+
+## Client profiles
+
+**MetaClash → LaneNode tunnel** on the S26: start LaneNode, then import
+`profiles/metaclas-chained.yaml` into MetaClash. iPhones use
+`profiles/shadowrocket-via-gateway.conf`.
+
+See [`profiles/HOTSPOT.md`](profiles/HOTSPOT.md).
