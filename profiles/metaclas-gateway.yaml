@@ -1,8 +1,8 @@
 # DEPRECATED for your setup — use metaclas-chained.yaml (MetaClash → LaneNode).
 # MetaClash GATEWAY loadout — phone aggregates ~10 LAN devices
-# Fill __UPSTREAM_*__ + change lane:CHANGE_ME_LAN_PASS then import & go.
+# Fill __UPSTREAM_*__ then import & go.
 #
-# Other devices → socks5://PHONE_LAN_IP:7891  (user lane / pass you set)
+# Other devices → socks5://PHONE_LAN_IP:7891
 # Do NOT let them browse raw through the hotspot NAT — that is throttle bait.
 # tcp-concurrent off + LaneNode-style discipline = less uplink stampede.
 # See profiles/HOTSPOT.md
@@ -12,9 +12,7 @@ socks-port: 7891
 redir-port: 7892
 tproxy-port: 7893
 allow-lan: true
-# LAN clients (the other ~9 devices) must authenticate — change this password
-authentication:
-  - "lane:CHANGE_ME_LAN_PASS"
+# WARNING: no LAN auth; use only on trusted/private networks
 bind-address: "*"
 mode: rule
 log-level: warning

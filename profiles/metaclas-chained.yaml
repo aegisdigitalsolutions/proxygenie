@@ -5,7 +5,7 @@
 #                  (TUN + rules)       (cellular bind + upload pace + CONNECT)
 #
 # Upstream host/user/pass go in LANE NODE only (the four secrets).
-# Here: only change lane:CHANGE_ME_LAN_PASS for LAN clients.
+# LAN auth is disabled for easier client imports.
 # See profiles/HOTSPOT.md
 
 mixed-port: 7890
@@ -13,9 +13,7 @@ socks-port: 7891
 redir-port: 7892
 tproxy-port: 7893
 allow-lan: true
-# LAN clients (the other ~9 devices) must authenticate — change this password
-authentication:
-  - "lane:CHANGE_ME_LAN_PASS"
+# WARNING: no LAN auth; use only on trusted/private networks
 bind-address: "*"
 mode: rule
 log-level: warning
