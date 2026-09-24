@@ -13,7 +13,7 @@ socks-port: 7891
 redir-port: 7892
 tproxy-port: 7893
 allow-lan: true
-# LAN clients can connect without username/password
+# WARNING: no LAN auth; use only on trusted/private networks
 bind-address: "*"
 mode: rule
 log-level: warning
